@@ -1,0 +1,6 @@
+{
+  "openrouter": {
+    "key": "your-openrouter-api-key-here",
+    "type": "api_key"
+  }
+}

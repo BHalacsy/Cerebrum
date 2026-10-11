@@ -1,0 +1,27 @@
+{
+	"caveman": "full",
+	"headroom": {
+		"enabled": true,
+		"maxToolChars": 12000,
+		"exemptTools": [
+			"read",
+			"ask_user",
+			"workflow_report",
+			"edit",
+			"write"
+		],
+		"dedupeLines": true,
+		"json": {
+			"enabled": true,
+			"maxArrayItems": 12,
+			"maxStringChars": 600
+		},
+		"prune": {
+			"enabled": true,
+			"atPercent": 55,
+			"keepTurns": 6,
+			"minChars": 1500
+		},
+		"proxy": null
+	}
+}

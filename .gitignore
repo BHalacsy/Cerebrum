@@ -1,0 +1,23 @@
+# Sensitive credentials
+auth.json
+
+# Cache and runtime data
+models-store.json
+sessions/
+headroom-cache/
+*.log
+
+# Pi managed installation & binaries
+bin/
+install/
+
+# Dependencies
+node_modules/
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*~

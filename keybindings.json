@@ -1,0 +1,17 @@
+{
+	"tui.input.newLine": "shift+enter",
+	"tui.input.copy": "ctrl+c",
+	"tui.input.tab": "ctrl+right",
+	"tui.editor.cursorWordRight": ["alt+right", "alt+f"],
+	"app.thinking.cycle": "shift+tab",
+	"app.suspend": "ctrl+b",
+	"tui.editor.cursorLeft": ["left"],
+	"app.model.cycleForward": "ctrl+p",
+	"app.exit": "ctrl+q",
+	"app.message.followUp": "ctrl+d",
+	"tui.editor.deleteCharForward": ["delete"],
+	"app.tools.expand": "ctrl+t",
+	"app.thinking.toggle": "alt+t",
+	"app.clear": "ctrl+a",
+	"tui.editor.cursorLineStart": ["home"]
+}
