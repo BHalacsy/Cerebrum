@@ -1,15 +1,18 @@
 # Sensitive credentials
 auth.json
+antigravity-accounts.json
 
 # Cache and runtime data
 models-store.json
 sessions/
 headroom-cache/
+/pi-subagents/
 *.log
 
 # Pi managed installation & binaries
 bin/
 install/
+/npm/
 
 # Dependencies
 node_modules/

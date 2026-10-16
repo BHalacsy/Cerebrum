@@ -1,7 +1,7 @@
 {
   "lastChangelogVersion": "1.1.0",
-  "defaultProvider": "openrouter",
-  "defaultModel": "moonshotai/kimi-k2.6",
+  "defaultProvider": "antigravity",
+  "defaultModel": "gemini-3.8-flash",
   "enabledModels": [
     "openrouter/~z-ai/glm-flash-latest",
     "openrouter/~z-ai/glm-latest",
@@ -13,9 +13,16 @@
     "openrouter/~anthropic/claude-sonnet-latest",
     "openrouter/~anthropic/claude-opus-latest",
     "openrouter/~anthropic/claude-haiku-latest",
-    "openrouter/~google/gemini-flash-latest"
+    "openrouter/~google/gemini-flash-latest",
+    "antigravity/gemini-3.8-flash",
+    "antigravity/gpt-oss-120b",
+    "antigravity/gemini-3.1-pro",
+    "antigravity/claude-opus-4-6",
+    "antigravity/claude-sonnet-4-6"
   ],
-  "packages": [],
+  "packages": [
+    "npm:pi-antigravity"
+  ],
   "defaultTools": [
     "+grep",
     "+find"

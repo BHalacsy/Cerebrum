@@ -53,4 +53,29 @@ if [ ! -f "$TARGET_DIR/auth.json" ]; then
   fi
 fi
 
+# 5. Create 'cerebrum' executable link and shell alias
+echo "==> Setting up 'cerebrum' command..."
+PI_BIN="${TARGET_DIR}/bin/pi"
+if [ ! -x "$PI_BIN" ]; then
+  PI_BIN="$(command -v pi || echo "${HOME}/.local/bin/pi")"
+fi
+
+CEREBRUM_LINK="${HOME}/.local/bin/cerebrum"
+mkdir -p "$(dirname "$CEREBRUM_LINK")"
+ln -sf "$PI_BIN" "$CEREBRUM_LINK"
+
+# Ensure ~/.local/bin is in PATH and add alias to shell configs
+SHELL_CONFIGS=()
+[ -f "${HOME}/.bashrc" ] && SHELL_CONFIGS+=("${HOME}/.bashrc")
+[ -f "${HOME}/.zshrc" ] && SHELL_CONFIGS+=("${HOME}/.zshrc")
+
+for cfg in "${SHELL_CONFIGS[@]}"; do
+  if ! grep -q 'PATH=.*\.local/bin' "$cfg" 2>/dev/null; then
+    echo 'export PATH="${HOME}/.local/bin:${PATH}"' >> "$cfg"
+  fi
+  if ! grep -q 'alias cerebrum=' "$cfg" 2>/dev/null; then
+    echo "alias cerebrum='pi'" >> "$cfg"
+  fi
+done
+
 echo "==> Pi setup finished successfully!"

@@ -4,9 +4,38 @@ import {
 	type KeybindingsManager,
 } from "@earendil-works/pi-coding-agent";
 import type { EditorTheme, TuiMouseEvent, TuiMouseEventResult, TUI } from "@earendil-works/pi-tui";
-import { CURSOR_MARKER, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
+import { CURSOR_MARKER, Key, matchesKey, truncateToWidth, visibleWidth, wrapTextWithAnsi } from "@earendil-works/pi-tui";
 import type { CursorStyle, IconGlyphs } from "./shared.ts";
 import { findBottomBorderIndex, isEditorBorderLine, sanitizeStatus, stripAnsi } from "./shared.ts";
+
+const TAB_PATCH_KEY = Symbol.for("pi.customEditor.tabAutocompletePatched");
+const TAB_HANDLER_KEY = Symbol.for("pi.customEditor.emptyTabHandler");
+
+function patchCustomEditorForTabCompletion(): void {
+	if (typeof CustomEditor === "undefined" || !CustomEditor.prototype) return;
+	if ((CustomEditor.prototype as any)[TAB_PATCH_KEY]) return;
+	(CustomEditor.prototype as any)[TAB_PATCH_KEY] = true;
+
+	const originalHandleInput = CustomEditor.prototype.handleInput;
+
+	CustomEditor.prototype.handleInput = function (data: string): void {
+		if (matchesKey(data, Key.tab)) {
+			const isShowingAutocomplete = typeof this.isShowingAutocomplete === "function" && this.isShowingAutocomplete();
+			const isEmpty = this.getText().trim().length === 0;
+			const handler = (globalThis as any)[TAB_HANDLER_KEY];
+
+			// If the editor is empty and not showing autocomplete popup, cycle agent modes
+			if (isEmpty && !isShowingAutocomplete && typeof handler === "function") {
+				Promise.resolve(handler()).catch(() => {});
+				return;
+			}
+		}
+
+		originalHandleInput.call(this, data);
+	};
+}
+
+patchCustomEditorForTabCompletion();
 
 function fillLine(content: string, width: number): string {
 	const truncated = truncateToWidth(content, Math.max(0, width), "");
@@ -226,6 +255,21 @@ export class OpenTuiEditor extends CustomEditor {
 			x: event.x - EDITOR_FRAME_LEFT_INSET,
 			width: event.width - EDITOR_FRAME_HORIZONTAL_CHROME,
 		});
+	}
+
+	override handleInput(data: string): void {
+		if (matchesKey(data, Key.tab)) {
+			const isShowingAutocomplete = typeof this.isShowingAutocomplete === "function" && this.isShowingAutocomplete();
+			const isEmpty = this.getText().trim().length === 0;
+			const handler = (globalThis as any)[TAB_HANDLER_KEY];
+
+			if (isEmpty && !isShowingAutocomplete && typeof handler === "function") {
+				Promise.resolve(handler()).catch(() => {});
+				return;
+			}
+		}
+
+		super.handleInput(data);
 	}
 
 	setWorkingStatusIndicator(indicator: WorkingStatusIndicator | undefined): void {

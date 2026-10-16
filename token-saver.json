@@ -1,5 +1,5 @@
 {
-	"caveman": "full",
+	"caveman": "lite",
 	"headroom": {
 		"enabled": true,
 		"maxToolChars": 12000,

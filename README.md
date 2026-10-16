@@ -2,15 +2,17 @@
 
 Personal setup for [Pi](https://pi.dev) with custom extensions, themes, modes, and keybindings.
 
+![img.png](img.png)
+
 ## Included Extensions
-- **agent-modes**: Switch agent modes and security constraints.
-- **ask-user**: Interactive user prompts during tool execution.
+- **agent-modes**: Switch agent modes and granular permission constraints.
+- **ask-user**: Context gathering tool. Prompts user for input to questions during execution.
 - **context-viewer**: View and inspect context and tokens.
-- **open-tui**: Custom full-screen TUI layout and widgets.
+- **open-tui**: Custom full-screen TUI layout and widgets (Copied from open-tui extension on pi marketplace).
 - **pi-natives**: Native utilities integration.
-- **token-saver**: Headroom and token optimization tool.
+- **token-saver**: Headroom and caveman token optimization tool.
 - **tool-manager**: Enable and disable agent tools dynamically.
-- **websearch**: Custom web search integration.
+- **websearch**: Custom web search integration (Searxng).
 
 ## Installation
 
