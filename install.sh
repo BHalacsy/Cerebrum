@@ -21,13 +21,18 @@ if [ "$SCRIPT_DIR" != "$TARGET_DIR" ]; then
   echo "==> Syncing files to $TARGET_DIR..."
   mkdir -p "$TARGET_DIR"
 
-  # Link extensions and themes directories
-  for dir in extensions themes; do
+  # Link extensions, themes, skills, prompts, and missions directories
+  for dir in extensions themes skills prompts missions; do
     if [ -d "$SCRIPT_DIR/$dir" ]; then
       mkdir -p "$TARGET_DIR/$dir"
       cp -rn "$SCRIPT_DIR/$dir/"* "$TARGET_DIR/$dir/" 2>/dev/null || true
     fi
   done
+
+  # Preserve workflows symlink if present
+  if [ -e "$SCRIPT_DIR/workflows" ] && [ ! -e "$TARGET_DIR/workflows" ]; then
+    cp -dn "$SCRIPT_DIR/workflows" "$TARGET_DIR/workflows" 2>/dev/null || true
+  fi
 
   # Copy config files if missing or link
   for file in settings.json keybindings.json agent-modes.json open-tui.json token-saver.json tsconfig.json package.json package-lock.json; do
@@ -79,3 +84,5 @@ for cfg in "${SHELL_CONFIGS[@]}"; do
 done
 
 echo "==> Pi setup finished successfully!"
+echo "==> If 'cerebrum' is not recognized in your current shell, reload your profile:"
+echo "    source ~/.bashrc   # or source ~/.zshrc"

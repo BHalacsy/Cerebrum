@@ -338,7 +338,7 @@ function parseSingleRequiredArg(args: string, usage: string): { ok: true; value:
 }
 
 function getProfileWorkerModel(profile: { subagents?: { agentOverrides?: Record<string, { model?: string }> } }): string | undefined {
-	const model = profile.subagents?.agentOverrides?.worker?.model;
+	const model = profile.subagents?.agentOverrides?.build?.model ?? profile.subagents?.agentOverrides?.worker?.model;
 	return typeof model === "string" && model.trim() ? model.trim() : undefined;
 }
 
