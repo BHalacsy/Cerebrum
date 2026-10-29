@@ -1,9 +1,6 @@
 import { isAbsolute, relative, resolve, sep } from "node:path";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { ThinkingLevel, Usage } from "@earendil-works/pi-ai";
 import type { ExtensionContext, Theme, ThemeColor } from "@earendil-works/pi-coding-agent";
-import { getAgentDir } from "@earendil-works/pi-coding-agent";
 import {
 	stripTerminalSequences as stripTerminalSequencesFromTui,
 	truncateToWidth,
@@ -24,9 +21,8 @@ export function stripAnsi(text: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Configuration: a read-only snapshot of ~/.pi/agent/open-tui.json. There is
-// no settings UI and nothing is ever written back; the file is the sole source
-// of values, with built-in defaults for missing or invalid fields.
+// Configuration: hardcoded fixed configuration. There is no external config
+// file, no settings UI, and nothing is read from disk.
 // ---------------------------------------------------------------------------
 
 export type CursorStyle = "block" | "bar" | "underline";
@@ -107,63 +103,8 @@ export const DEFAULT_CONFIG: OpenTuiConfig = {
 	},
 };
 
-const CURSOR_STYLES: readonly CursorStyle[] = ["block", "bar", "underline"];
-const ICON_MODES: readonly IconMode[] = ["auto", "nerd", "unicode", "ascii"];
-
-function booleanFlag(value: unknown, fallback: boolean): boolean {
-	return typeof value === "boolean" ? value : fallback;
-}
-
-function segmentFlags(raw: unknown): FooterSegments {
-	const fallback = DEFAULT_CONFIG.footerSegments;
-	const source = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
-	const result = { ...fallback };
-	for (const key of Object.keys(fallback) as Array<keyof FooterSegments>) {
-		result[key] = booleanFlag(source[key], fallback[key]);
-	}
-	return result;
-}
-
-function telemetryFlags(raw: unknown): TelemetryConfig {
-	const fallback = DEFAULT_CONFIG.telemetry;
-	const source = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
-	const result = { ...fallback };
-	for (const key of Object.keys(fallback) as Array<keyof TelemetryConfig>) {
-		result[key] = booleanFlag(source[key], fallback[key]);
-	}
-	return result;
-}
-
-export function loadFixedConfig(notify?: (msg: string, level: "warning" | "info") => void): OpenTuiConfig {
-	const path = join(getAgentDir(), "open-tui.json");
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(readFileSync(path, "utf8"));
-	} catch (err) {
-		if ((err as NodeJS.ErrnoException)?.code !== "ENOENT") {
-			notify?.(`open-tui config parse error: ${err instanceof Error ? err.message : String(err)}`, "warning");
-		}
-		parsed = {};
-	}
-	const source = (parsed && typeof parsed === "object" ? parsed : {}) as Record<string, unknown>;
-	const lines = (source.thinkingPeek as Record<string, unknown> | undefined)?.lines;
-	return {
-		enabled: booleanFlag(source.enabled, DEFAULT_CONFIG.enabled),
-		inlineFooter: booleanFlag(source.inlineFooter, DEFAULT_CONFIG.inlineFooter),
-		cursorStyle: CURSOR_STYLES.includes(source.cursorStyle as CursorStyle)
-			? source.cursorStyle as CursorStyle
-			: DEFAULT_CONFIG.cursorStyle,
-		icons: {
-			mode: ICON_MODES.includes((source.icons as Record<string, unknown> | undefined)?.mode as IconMode)
-				? (source.icons as Record<string, unknown>).mode as IconMode
-				: DEFAULT_CONFIG.icons.mode,
-		},
-		footerSegments: segmentFlags(source.footerSegments),
-		telemetry: telemetryFlags(source.telemetry),
-		thinkingPeek: {
-			lines: lines === 0 || lines === 1 || lines === 2 ? lines : DEFAULT_CONFIG.thinkingPeek.lines,
-		},
-	};
+export function loadFixedConfig(_notify?: (msg: string, level: "warning" | "info") => void): OpenTuiConfig {
+	return DEFAULT_CONFIG;
 }
 
 // ---------------------------------------------------------------------------

@@ -21,23 +21,29 @@ if [ "$SCRIPT_DIR" != "$TARGET_DIR" ]; then
   echo "==> Syncing files to $TARGET_DIR..."
   mkdir -p "$TARGET_DIR"
 
-  # Link extensions, themes, skills, prompts, and missions directories
-  for dir in extensions themes skills prompts missions; do
+  # Sync extensions, themes, skills, and prompts directories
+  for dir in extensions themes skills prompts; do
     if [ -d "$SCRIPT_DIR/$dir" ]; then
       mkdir -p "$TARGET_DIR/$dir"
-      cp -rn "$SCRIPT_DIR/$dir/"* "$TARGET_DIR/$dir/" 2>/dev/null || true
+      cp -r "$SCRIPT_DIR/$dir/"* "$TARGET_DIR/$dir/" 2>/dev/null || true
     fi
   done
 
-  # Preserve workflows symlink if present
-  if [ -e "$SCRIPT_DIR/workflows" ] && [ ! -e "$TARGET_DIR/workflows" ]; then
-    cp -dn "$SCRIPT_DIR/workflows" "$TARGET_DIR/workflows" 2>/dev/null || true
+  # Remove legacy/deprecated extensions if present
+  rm -rf "$TARGET_DIR/extensions/context-viewer"
+
+  # Ensure relative workflows symlink
+  if [ -d "$TARGET_DIR/extensions/pi-subagents/workflows" ]; then
+    (cd "$TARGET_DIR" && ln -sfn "extensions/pi-subagents/workflows" "workflows")
   fi
 
-  # Copy config files if missing or link
-  for file in settings.json keybindings.json agent-modes.json open-tui.json token-saver.json tsconfig.json package.json package-lock.json; do
+  # Copy config files (back up existing settings if different)
+  for file in settings.json keybindings.json agent-modes.json token-saver.json tsconfig.json package.json package-lock.json; do
     if [ -f "$SCRIPT_DIR/$file" ]; then
-      cp -n "$SCRIPT_DIR/$file" "$TARGET_DIR/$file" 2>/dev/null || true
+      if [ -f "$TARGET_DIR/$file" ] && ! cmp -s "$SCRIPT_DIR/$file" "$TARGET_DIR/$file"; then
+        cp "$TARGET_DIR/$file" "$TARGET_DIR/${file}.bak" 2>/dev/null || true
+      fi
+      cp -f "$SCRIPT_DIR/$file" "$TARGET_DIR/$file" 2>/dev/null || true
     fi
   done
 fi
@@ -46,6 +52,18 @@ fi
 if [ -f "$TARGET_DIR/package.json" ]; then
   echo "==> Installing extension npm dependencies in $TARGET_DIR..."
   (cd "$TARGET_DIR" && npm install --omit=dev)
+fi
+
+# Locate Pi binary
+PI_BIN="${TARGET_DIR}/bin/pi"
+if [ ! -x "$PI_BIN" ]; then
+  PI_BIN="$(command -v pi || echo "${HOME}/.local/bin/pi")"
+fi
+
+# Reconcile Pi packages (pi-antigravity, pi-context-view, etc.)
+if [ -x "$PI_BIN" ]; then
+  echo "==> Reconciling Pi extension packages..."
+  "$PI_BIN" update --extensions >/dev/null 2>&1 || true
 fi
 
 # 4. Check auth.json
@@ -83,6 +101,18 @@ for cfg in "${SHELL_CONFIGS[@]}"; do
   fi
 done
 
-echo "==> Pi setup finished successfully!"
-echo "==> If 'cerebrum' is not recognized in your current shell, reload your profile:"
-echo "    source ~/.bashrc   # or source ~/.zshrc"
+echo "==> Cerebrum setup finished successfully!"
+echo ""
+echo "==> Quick Start:"
+echo "    1. Reload your shell profile:"
+echo "       source ~/.bashrc   # or source ~/.zshrc"
+echo ""
+echo "    2. Start Cerebrum:"
+echo "       cerebrum   # or: pi"
+echo ""
+echo "    3. Authentication:"
+echo "       - For Antigravity (Gemini 3.8 Flash high thinking default):"
+echo "         Run '/login antigravity' inside Pi to sign in with Google OAuth."
+echo "       - For OpenRouter:"
+echo "         Add your API key to $TARGET_DIR/auth.json"
+echo ""

@@ -6,28 +6,14 @@ import { Key, matchesKey, truncateToWidth, type Component, type KeyId, type TUI 
 import { discoverAgentSnapshot, discoverAgents, findBlockingAgentDiagnostic, formatUnknownAgentError, resolveAgentName, unknownAgentDiagnosticContext, type AgentConfig, type AgentDiscoveryDiagnostic, type AgentScope, type UnknownAgentDiagnosticContext } from "../agents/agents.ts";
 import { listRuntimeAgentConfigs, mergeRuntimeAgents } from "../agents/runtime-agent-registry.ts";
 import { resolveExistingReadPaths } from "../shared/settings.ts";
-import {
-	DEFAULT_PROVIDER_MODELS_MAX_AGE_DAYS,
-	applySubagentProfile,
-	checkSubagentProfile,
-	generateProfilesForProvider,
-	listSubagentProfiles,
-	readSubagentProfile,
-	refreshProviderModelCatalog,
-} from "../profiles/profiles.ts";
 import type { SubagentParamsLike } from "../runs/foreground/subagent-executor.ts";
-import { findModelInfo, toModelInfo } from "../shared/model-info.ts";
 import { shortenPath } from "../shared/formatters.ts";
 import { listAsyncRuns, formatAsyncRunProgressLabel, type AsyncRunSummary } from "../runs/background/async-status.ts";
-import { encodeInspectReply, handleInspectRpcArgs, INSPECT_WIDGET_KEY } from "../runs/background/inspect-rpc.ts";
 import { listScheduledRunSummaries } from "../runs/background/scheduled-runs.ts";
 import { resolveAsyncStatusChild } from "../runs/shared/child-identity.ts";
 import { readStatus } from "../shared/utils.ts";
 import type { SlashSubagentResponse, SlashSubagentUpdate } from "./slash-bridge.ts";
-import { registerPromptWorkflowCommands } from "./prompt-workflows.ts";
 import { collectSubagentCost, formatSubagentCostReport } from "./subagent-cost.ts";
-import { openSubagentsAdmin } from "./subagents-admin.ts";
-import { SUBAGENT_GUIDE_TOPICS } from "../extension/subagent-guide.ts";
 import { getInspectorPlugins } from "../inspectors/plugins.ts";
 import {
 	applySlashUpdate,
@@ -132,34 +118,8 @@ const makeAgentCompletions = (pi: ExtensionAPI, state: SubagentState) => (prefix
 		.map((agent) => ({ value: agent.name, label: agent.name }));
 };
 
-const makeProviderCompletions = (state: SubagentState) => (prefix: string) => {
-	if (prefix.includes(" ")) return null;
-	const available = state.lastUiContext?.modelRegistry?.getAvailable?.();
-	if (!Array.isArray(available)) return null;
-	const providers = [...new Set(available
-		.map((model) => typeof model?.provider === "string" ? model.provider : "")
-		.filter(Boolean))]
-		.sort((a, b) => a.localeCompare(b));
-	return providers
-		.filter((provider) => provider.startsWith(prefix))
-		.map((provider) => ({ value: provider, label: provider }));
-};
-
 function sendSlashText(pi: ExtensionAPI, text: string): void {
 	pi.sendMessage({ customType: SLASH_TEXT_RESULT_TYPE, content: text, display: true });
-}
-
-async function withSlashStatus<T>(
-	ctx: ExtensionContext,
-	text: string,
-	run: () => Promise<T>,
-): Promise<T> {
-	if (ctx.hasUI) ctx.ui.setStatus("subagent-slash-text", text);
-	try {
-		return await run();
-	} finally {
-		if (ctx.hasUI) ctx.ui.setStatus("subagent-slash-text", undefined);
-	}
 }
 
 type Theme = ExtensionContext["ui"]["theme"];
@@ -329,17 +289,6 @@ class SubagentsStopSelector implements Component {
 		}
 		return lines.map((line) => truncateToWidth(line, contentWidth));
 	}
-}
-
-function parseSingleRequiredArg(args: string, usage: string): { ok: true; value: string } | { ok: false; message: string } {
-	const parts = args.trim().split(/\s+/).filter(Boolean);
-	if (parts.length !== 1) return { ok: false, message: usage };
-	return { ok: true, value: parts[0]! };
-}
-
-function getProfileWorkerModel(profile: { subagents?: { agentOverrides?: Record<string, { model?: string }> } }): string | undefined {
-	const model = profile.subagents?.agentOverrides?.build?.model ?? profile.subagents?.agentOverrides?.worker?.model;
-	return typeof model === "string" && model.trim() ? model.trim() : undefined;
 }
 
 function isStaleExtensionContextError(error: unknown): boolean {
@@ -525,7 +474,7 @@ function persistSlashSessionSnapshot(ctx: ExtensionContext): void {
 	}
 }
 
-async function runSlashSubagent(
+export async function runSlashSubagent(
 	pi: ExtensionAPI,
 	ctx: ExtensionContext,
 	params: SubagentParamsLike,
@@ -644,13 +593,6 @@ export function registerSlashCommands(
 		}
 	};
 
-	pi.registerCommand("subagents", {
-		description: "Administer subagents: inspect metadata and update models, thinking, or prompts",
-		handler: async (args, ctx) => {
-			await openSubagentsAdmin(pi, ctx, args);
-		},
-	});
-
 	pi.registerCommand("run", {
 		description: "Run one subagent through a workflow script: /run agent[output=file] [task] [--bg] [--fork]",
 		getArgumentCompletions: makeAgentCompletions(pi, state),
@@ -703,91 +645,10 @@ export function registerSlashCommands(
 		},
 	});
 
-	pi.registerCommand("subagents-inspect-rpc", {
-		description: "Host integration bridge: answer an async child inspection request with a correlated widget payload (no model turn)",
-		handler: async (args, ctx) => {
-			if (ctx.mode === "tui") {
-				ctx.ui.notify("Inspection replies are emitted only on RPC surfaces. Use /subagents or subagent({ action: \"status\", options: { view: \"transcript\" } }) interactively.", "info");
-				return;
-			}
-			if (!ctx.hasUI) return;
-			const reply = handleInspectRpcArgs(args, { state });
-			// Emit-then-retract in one handler: stdio delivers the two widget
-			// updates in order, the host buffers the payload by requestId, and
-			// the dedicated key never accumulates visible state.
-			ctx.ui.setWidget(INSPECT_WIDGET_KEY, encodeInspectReply(reply));
-			ctx.ui.setWidget(INSPECT_WIDGET_KEY, undefined);
-		},
-	});
-
-	pi.registerCommand("subagents-guide", {
-		description: "Show a packaged subagents guide topic",
-		getArgumentCompletions: (prefix) => prefix.includes(" ") ? null : SUBAGENT_GUIDE_TOPICS
-			.filter((topic) => topic.startsWith(prefix))
-			.map((topic) => ({ value: topic, label: topic })),
-		handler: async (args, ctx) => {
-			const topic = args.trim();
-			if (topic.includes(" ")) {
-				ctx.ui.notify("Usage: /subagents-guide [topic]", "error");
-				return;
-			}
-			await runCommand(ctx, { action: "guide", ...(topic ? { topic } : {}) });
-		},
-	});
-
-	pi.registerCommand("subagents-refine", {
-		description: "Generate a bounded project-local refinement overlay for one subagent",
-		getArgumentCompletions: makeAgentCompletions(pi, state),
-		handler: async (args, ctx) => {
-			const parts = args.trim().split(/\s+/).filter(Boolean);
-			if (parts.length !== 1) {
-				ctx.ui.notify("Usage: /subagents-refine <agent>", "error");
-				return;
-			}
-			await runCommand(ctx, { action: "refine", agent: parts[0] });
-		},
-	});
-
 	pi.registerCommand("subagents-fleet", {
 		description: "Open the live subagent fleet inspector",
 		handler: async (_args, ctx) => showFleet(ctx),
 	});
-
-	const detachForegroundRun = (args: string, ctx: ExtensionContext): void => {
-		const id = args.trim();
-		let control: ReturnType<typeof selectForegroundDetachControl>;
-		try {
-			control = selectForegroundDetachControl(state, id);
-		} catch (error) {
-			ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
-			return;
-		}
-		if (!control) {
-			ctx.ui.notify(id ? `No active foreground run found for '${id}'.` : "No active foreground single-subagent run to detach.", "info");
-			return;
-		}
-		if (control.mode !== "single") {
-			ctx.ui.notify("/subagents-detach currently supports single-subagent runs only.", "error");
-			return;
-		}
-		if (!control.detach?.()) {
-			ctx.ui.notify(`Foreground run ${control.runId} is not currently detachable.`, "info");
-			return;
-		}
-		sendSlashText(pi, `Detached foreground run ${control.runId} without terminating its child. Use subagent({ action: "status", id: ${JSON.stringify(control.runId)} }) or bg_wait({ id: ${JSON.stringify(control.runId)} }) to recover the eventual result. This does not daemonize the process or guarantee survival across Pi reload/restart.`);
-	};
-
-	pi.registerCommand("subagents-detach", {
-		description: "Detach the active foreground single-subagent run without terminating it",
-		handler: async (args, ctx) => detachForegroundRun(args, ctx),
-	});
-
-	if (options.foregroundDetachShortcut) {
-		pi.registerShortcut(options.foregroundDetachShortcut as KeyId, {
-			description: "Detach the active foreground subagent and keep it running in the background",
-			handler: async (ctx) => detachForegroundRun("", ctx),
-		});
-	}
 
 	pi.registerCommand("subagents-stop", {
 		description: "Stop a current-session async subagent run, or one child of it with /subagents-stop <run-id> <child-id>",
@@ -897,200 +758,6 @@ export function registerSlashCommands(
 				// a pause-and-revive replacement after a missed acknowledgment.
 				steeringRecovery: false,
 			});
-		},
-	});
-
-	registerPromptWorkflowCommands({
-		pi,
-		run: async (params, ctx) => {
-			launchCommand(ctx, params);
-		},
-	});
-
-	pi.registerCommand("subagents-models", {
-		description: "Show model mappings for discovered subagents",
-		getArgumentCompletions: makeAgentCompletions(pi, state),
-		handler: async (args, ctx) => {
-			const trimmed = args.trim();
-			if (!trimmed) {
-				await runCommand(ctx, { action: "models" });
-				return;
-			}
-			const parts = trimmed.split(/\s+/).filter(Boolean);
-			if (parts.length !== 1) {
-				ctx.ui.notify("Usage: /subagents-models [agent-name]", "error");
-				return;
-			}
-			await runCommand(ctx, { action: "models", agent: parts[0]! });
-		},
-	});
-
-	pi.registerCommand("subagents-profiles", {
-		description: "List saved subagent profiles",
-		handler: async (_args, _ctx) => {
-			const profiles = listSubagentProfiles();
-			if (profiles.length === 0) {
-				sendSlashText(pi, "Subagent profiles\n\nNo subagent profiles found in ~/.pi/agent/profiles/pi-subagents/");
-				return;
-			}
-			sendSlashText(pi, `Subagent profiles\n\n${profiles.join("\n")}`);
-		},
-	});
-
-	pi.registerCommand("subagents-load-profile", {
-		description: "Load a subagent profile into ~/.pi/agent/settings.json",
-		getArgumentCompletions: (prefix) => {
-			if (prefix.includes(" ")) return null;
-			return listSubagentProfiles()
-				.filter((name) => name.startsWith(prefix))
-				.map((name) => ({ value: name, label: name }));
-		},
-		handler: async (args, ctx) => {
-			const parsed = parseSingleRequiredArg(args, "Usage: /subagents-load-profile <name>");
-			if (parsed.ok === false) {
-				ctx.ui.notify(parsed.message, "error");
-				return;
-			}
-			try {
-				await withSlashStatus(ctx, `Loading profile ${parsed.value}…`, async () => {
-					const { profile } = readSubagentProfile(parsed.value);
-					const workerModel = getProfileWorkerModel(profile);
-					const result = applySubagentProfile(parsed.value);
-					const lines = [
-						`Loaded subagent profile: ${parsed.value}`,
-						`Profile: ${result.filePath}`,
-						`Updated: ${result.settingsPath}`,
-					];
-
-					if (workerModel && typeof pi.setModel === "function" && typeof ctx.modelRegistry?.find === "function" && typeof ctx.modelRegistry?.getAvailable === "function") {
-						const shouldSwitch = await ctx.ui.confirm(
-							"",
-							`Profile loaded. Also switch this session to the profile worker model?\n\n${workerModel}`,
-						);
-						if (shouldSwitch) {
-							const modelInfo = findModelInfo(workerModel, ctx.modelRegistry.getAvailable().map(toModelInfo));
-							const model = modelInfo ? ctx.modelRegistry.find(modelInfo.provider, modelInfo.id) : undefined;
-							if (!modelInfo || !model) {
-								lines.push(`Could not switch current session model: '${workerModel}' is not available in the current model registry.`);
-							} else {
-								const success = await pi.setModel(model);
-								if (success) lines.push(`Current session model switched to: ${modelInfo.fullId}`);
-								else lines.push(`Could not switch current session model to '${workerModel}': no API key or provider access is available.`);
-							}
-						}
-					} else if (workerModel) {
-						lines.push(`Profile worker model: ${workerModel}`);
-					}
-
-					sendSlashText(pi, lines.join("\n"));
-				});
-			} catch (error) {
-				ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
-			}
-		},
-	});
-
-	pi.registerCommand("subagents-refresh-provider-models", {
-		description: "Refresh the cached model catalog for one provider",
-		getArgumentCompletions: makeProviderCompletions(state),
-		handler: async (args, ctx) => {
-			const trimmed = args.trim();
-			const force = /(?:^|\s)--force$/.test(trimmed) || /(?:^|\s)force$/.test(trimmed);
-			const withoutForce = trimmed.replace(/(?:^|\s)(?:--force|force)$/, "").trim();
-			const parsed = parseSingleRequiredArg(withoutForce, "Usage: /subagents-refresh-provider-models <provider> [--force]");
-			if (parsed.ok === false) {
-				ctx.ui.notify(parsed.message, "error");
-				return;
-			}
-			try {
-				await withSlashStatus(ctx, `Refreshing provider models for ${parsed.value}…`, async () => {
-					const result = await refreshProviderModelCatalog(pi, ctx, parsed.value, { force, maxAgeDays: DEFAULT_PROVIDER_MODELS_MAX_AGE_DAYS });
-					const lines = [
-						"Provider model catalog",
-						`Provider: ${parsed.value}`,
-						`Status: ${result.reused ? "fresh cache reused" : "refreshed"}`,
-						`File: ${result.filePath}`,
-						`Models: ${result.catalog.models.length}`,
-						`Refreshed at: ${result.catalog.refreshedAt}`,
-					];
-					if (result.heuristicFallbackCount > 0) {
-						lines.push(`Warning: ${result.heuristicFallbackCount} model${result.heuristicFallbackCount === 1 ? " was" : "s were"} classified with name heuristics fallback.`);
-					}
-					sendSlashText(pi, lines.join("\n"));
-				});
-			} catch (error) {
-				ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
-			}
-		},
-	});
-
-	pi.registerCommand("subagents-generate-profiles", {
-		description: "Generate <provider>.quota and <provider>.quality subagent profiles",
-		getArgumentCompletions: makeProviderCompletions(state),
-		handler: async (args, ctx) => {
-			const parsed = parseSingleRequiredArg(args, "Usage: /subagents-generate-profiles <provider>");
-			if (parsed.ok === false) {
-				ctx.ui.notify(parsed.message, "error");
-				return;
-			}
-			try {
-				await withSlashStatus(ctx, `Generating profiles for ${parsed.value}…`, async () => {
-					const result = await generateProfilesForProvider(pi, ctx, parsed.value, { maxAgeDays: DEFAULT_PROVIDER_MODELS_MAX_AGE_DAYS });
-					const lines = [
-						"Generated subagent profiles",
-						`Provider: ${parsed.value}`,
-						`Catalog: ${result.catalogPath}`,
-						`Quota: ${result.quotaPath}`,
-						`  cheap=${result.quotaModels.cheap}`,
-						`  medium=${result.quotaModels.medium}`,
-						`  strong=${result.quotaModels.strong}`,
-						`Quality: ${result.qualityPath}`,
-						`  cheap=${result.qualityModels.cheap}`,
-						`  medium=${result.qualityModels.medium}`,
-						`  strong=${result.qualityModels.strong}`,
-					];
-					if (result.selectedHeuristicFallbackCount > 0) {
-						lines.push(`Warning: generated profiles depend on heuristic-only classification for ${result.selectedHeuristicFallbackCount} selected model${result.selectedHeuristicFallbackCount === 1 ? "" : "s"}.`);
-					} else if (result.heuristicFallbackCount > 0) {
-						lines.push(`Warning: provider catalog still contains ${result.heuristicFallbackCount} heuristic-classified model${result.heuristicFallbackCount === 1 ? "" : "s"}.`);
-					}
-					sendSlashText(pi, lines.join("\n"));
-				});
-			} catch (error) {
-				ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
-			}
-		},
-	});
-
-	pi.registerCommand("subagents-check-profile", {
-		description: "Check whether a saved profile still points to usable models",
-		getArgumentCompletions: (prefix) => {
-			if (prefix.includes(" ")) return null;
-			return listSubagentProfiles()
-				.filter((name) => name.startsWith(prefix))
-				.map((name) => ({ value: name, label: name }));
-		},
-		handler: async (args, ctx) => {
-			const parsed = parseSingleRequiredArg(args, "Usage: /subagents-check-profile <name>");
-			if (parsed.ok === false) {
-				ctx.ui.notify(parsed.message, "error");
-				return;
-			}
-			try {
-				await withSlashStatus(ctx, `Checking profile ${parsed.value}…`, async () => {
-					const result = await checkSubagentProfile(pi, ctx, parsed.value);
-					const lines = [
-						"Subagent profile check",
-						`Profile: ${result.profileName}`,
-						`File: ${result.filePath}`,
-						"",
-						...result.results.map((entry) => `${entry.agent} → ${entry.model} — registry ${entry.inRegistry ? "ok" : "missing"}; probe ${entry.probe.status}${entry.probe.message ? ` (${entry.probe.message.split(/\r?\n/, 1)[0]})` : ""}`),
-					];
-					sendSlashText(pi, lines.join("\n"));
-				});
-			} catch (error) {
-				ctx.ui.notify(error instanceof Error ? error.message : String(error), "error");
-			}
 		},
 	});
 

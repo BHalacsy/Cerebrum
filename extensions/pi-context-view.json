@@ -1,0 +1,21 @@
+{
+  "systemPromptColor": "#999999",
+  "instructionFilesColor": "#b1b9f9",
+  "skillsColor": "#48968c",
+  "builtInToolsColor": "#ffc107",
+  "customToolsColor": "#ffc107",
+  "mcpToolsColor": "#af87ff",
+  "userMessagesColor": "#4eba65",
+  "assistantMessagesColor": "#d77757",
+  "assistantThinkingColor": "#b07a66",
+  "toolCallsColor": "#fd5db1",
+  "toolOutputColor": "#9b59b6",
+  "extensionsColor": "#7aa2c7",
+  "compactedDataColor": "#ff3366",
+  "autoCompactBufferColor": "dim",
+  "freeSpaceColor": "dim",
+
+  "mapCols": 16,
+  "mapRows": 16,
+  "autoProbing": true
+}

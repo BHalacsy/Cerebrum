@@ -27,8 +27,6 @@ function stripFrontMatter(md: string): string {
  *   clipboard — read text/image from, or write text to, the system clipboard
  *   mermaid   — render a Mermaid diagram to Unicode/ASCII art
  *
- * Command: /natives — show addon status.
- *
  * grep and find are inactive by default in pi; enable them with `"defaultTools": ["+grep", "+find"]`
  * in settings.json or via /tools.
  */
@@ -49,7 +47,7 @@ import {
 	truncateLine,
 } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import { natives, nativesStatus, resolveToolPath } from "./natives.ts";
+import { natives, resolveToolPath } from "./natives.ts";
 
 const GREP_DEFAULT_LIMIT = 100;
 const FIND_DEFAULT_LIMIT = 1000;
@@ -456,11 +454,4 @@ export default function piNatives(pi: ExtensionAPI) {
 	registerWebfetch(pi);
 	registerClipboard(pi);
 	registerMermaid(pi);
-
-	pi.registerCommand("natives", {
-		description: "Show pi-natives addon status",
-		handler: async (_args, ctx) => {
-			ctx.ui.notify(nativesStatus(), "info");
-		},
-	});
 }

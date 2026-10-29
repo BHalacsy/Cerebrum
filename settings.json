@@ -1,7 +1,11 @@
 {
-  "lastChangelogVersion": "1.1.0",
+  "lastChangelogVersion": "1.4.0",
   "defaultProvider": "antigravity",
   "defaultModel": "gemini-3.8-flash",
+  "defaultThinkingLevel": "high",
+  "modelThinkingLevels": {
+    "antigravity/gemini-3.8-flash": "high"
+  },
   "enabledModels": [
     "openrouter/~z-ai/glm-flash-latest",
     "openrouter/~z-ai/glm-latest",
@@ -14,14 +18,20 @@
     "openrouter/~anthropic/claude-opus-latest",
     "openrouter/~anthropic/claude-haiku-latest",
     "openrouter/~google/gemini-flash-latest",
-    "antigravity/gemini-3.8-flash",
+    "antigravity/gemini-3.8-flash:high",
     "antigravity/gpt-oss-120b",
-    "antigravity/gemini-3.1-pro",
     "antigravity/claude-opus-4-6",
     "antigravity/claude-sonnet-4-6"
   ],
   "packages": [
-    "npm:pi-antigravity"
+    {
+      "source": "npm:pi-antigravity",
+      "extensions": [
+        "-src/features/generate-image.ts"
+      ]
+    },
+    "npm:pi-context-view",
+    "npm:pi-mcp-adapter"
   ],
   "defaultTools": [
     "+grep",
@@ -35,7 +45,7 @@
   "extensions": [
     "-builtin:llama.cpp",
     "-builtin:mcp",
-    "+builtin:codemode"
+    "-builtin:codemode"
   ],
   "fullscreenWheelScrollLines": 2,
   "fullscreenScrollbar": "hidden",

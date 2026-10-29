@@ -21,14 +21,14 @@ const RESET = "\x1b[0m";
 // last cell drops to grey 237, barely above the 236 dot color.
 const DIM = "\x1b[38;5;236m";
 const TRAIL_COLORS = [
-	"\x1b[38;5;44m", // head  (0,215,215) ≈ theme cyan
-	"\x1b[38;5;43m", // (0,215,175)
-	"\x1b[38;5;37m", // (0,175,175)
-	"\x1b[38;5;36m", // (0,175,135)
-	"\x1b[38;5;30m", // (0,135,135)
-	"\x1b[38;5;29m", // (0,135,95)
-	"\x1b[38;5;23m", // (0,95,95) deep ocean teal
-	"\x1b[38;5;237m", // (58,58,58) barely above the dim dots
+	"\x1b[38;5;38m",  // Head: RGB(0, 175, 215) — closest vibrant 256-color match to #18b3c4
+	"\x1b[38;5;37m",  // RGB(0, 175, 175) — slightly deeper saturated cyan
+	"\x1b[38;5;31m",  // RGB(0, 135, 175) — mid-tone muted cyan
+	"\x1b[38;5;30m",  // RGB(0, 135, 135) — medium teal
+	"\x1b[38;5;24m",  // RGB(0, 95, 135)  — deep slate teal
+	"\x1b[38;5;23m",  // RGB(0, 95, 95)   — dark muted sea green/gray
+	"\x1b[38;5;238m", // Grayscale ramp: fading dark grey-cyan transition
+	"\x1b[38;5;236m", // Tail: barely above the background dot color
 ];
 
 function colorize(value: string, color: string) {

@@ -31,10 +31,6 @@ Fall back to the built-in implementation if the addon fails to load or errors.
 | `clipboard` | `action=read`: clipboard text, or image if no text (`image=true` prefers image, resized via pi's own image pipeline). `action=write`: copy text. |
 | `mermaid` | Render Mermaid diagrams to Unicode box-drawing art. Labels must use `-- label -->` (`-->\|label\|` is rewritten automatically). |
 
-### Command
-
-`/natives` — shows addon version and which `.node` binary was loaded.
-
 ## Enabling grep/find
 
 Like the built-ins, the overrides are registered **inactive**. Enabled in `~/.pi/agent/settings.json`:

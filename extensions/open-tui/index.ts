@@ -844,9 +844,7 @@ export default function (pi: ExtensionAPI) {
 		state.lastDoneIn = undefined;
 		invalidateUsageCache();
 
-		// Re-read the (never written) config file so manual edits take effect on
-		// the next session without a process restart.
-		config = loadFixedConfig((msg, level) => ctx.ui.notify(msg, level));
+		config = loadFixedConfig();
 		clearPeekLabel(ctx);
 
 		if (isTuiContext(ctx)) applySpinner(ctx);

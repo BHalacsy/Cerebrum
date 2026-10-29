@@ -367,59 +367,17 @@ async function handleWatchdogCommand(
 	ctx.ui.notify(`Usage: /subagents-watchdog [status|on|off|session on|session off|recommend-model|model recommended|model <provider/model[:thinking]>|model inherit|thinking ${THINKING_LEVELS.join("|")}|thinking inherit|session model recommended|check|test concern|blocker low|medium|high <text>]`, "error");
 }
 
-export function registerMainWatchdog(pi: ExtensionAPI, options: RegisterMainWatchdogOptions = {}): MainWatchdogRuntime {
-	let currentContext: ExtensionContext | undefined;
-	let diffBaseline: Promise<WatchdogDiffBaseline | undefined> | undefined;
-	const rememberContext = (ctx: ExtensionContext) => {
-		currentContext = ctx;
-	};
-	const runtime = options.runtime ?? new MainWatchdogRuntime({
-		review: options.review ?? createMainWatchdogReview(() => currentContext, { getThinkingLevel: () => pi.getThinkingLevel(), diffBaseline: () => diffBaseline }),
-		reviewDescription: options.review ? "injected seam" : "real model review",
-		reviewChangesOnly: true,
-		displayWarning: (details, options) => pi.sendMessage(createWatchdogWarningMessage(details, { display: true, details }), options),
-		displayUserWarning: (details) => pi.appendEntry(SUBAGENT_WATCHDOG_WARNING_TYPE, details),
-		displayClarification: (content) => pi.sendMessage({ customType: "subagent_watchdog_clarification", content, display: true }, { deliverAs: "steer", triggerTurn: true }),
-	});
-
-	pi.registerCommand("subagents-watchdog", {
-		description: "Show or toggle the default-off subagent watchdog",
-		handler: (args, ctx) => {
-			rememberContext(ctx);
-			return handleWatchdogCommand(pi, runtime, args, ctx);
-		},
-	});
-
-	pi.on("session_start", (_event, ctx) => {
-		rememberContext(ctx);
-		diffBaseline = startWatchdogDiffBaselineCapture(ctx.cwd);
-		runtime.bindSession(ctx);
-	});
-	pi.on("before_agent_start", (event, ctx) => {
-		rememberContext(ctx);
-		runtime.handleBeforeAgentStart(event, ctx);
-	});
-	pi.on("turn_end", (event, ctx) => {
-		rememberContext(ctx);
-		runtime.handleTurnEnd(event, ctx);
-	});
-	pi.on("input", (event) => runtime.handleUserInput(event));
-	pi.on("model_select", () => runtime.handleModelChange());
-	pi.on("tool_result", (_event, ctx) => {
-		rememberContext(ctx);
-		runtime.handleToolResult(ctx);
-	});
-	pi.on("agent_end", (event, ctx) => {
-		rememberContext(ctx);
-		return runtime.handleAgentEnd(event, ctx);
-	});
-	pi.on("session_before_switch", () => runtime.reset("session switch", { clearReviewInputSignature: true, clearLspLedger: true, clearScope: true }));
-	pi.on("session_before_fork", () => runtime.reset("session fork", { clearReviewInputSignature: true, clearLspLedger: true, clearScope: true }));
-	pi.on("session_compact", () => runtime.reset("session compact", { clearActivity: true }));
-	pi.on("session_shutdown", () => {
-		currentContext = undefined;
-		runtime.dispose();
-	});
-
-	return runtime;
+export function registerMainWatchdog(_pi: ExtensionAPI, _options: RegisterMainWatchdogOptions = {}): MainWatchdogRuntime {
+	return {
+		dispose() {},
+		displayRuleWarning() {},
+		bindSession() {},
+		handleBeforeAgentStart() {},
+		handleTurnEnd() {},
+		handleUserInput() {},
+		handleModelChange() {},
+		handleToolResult() {},
+		handleAgentEnd() {},
+		reset() {},
+	} as unknown as MainWatchdogRuntime;
 }

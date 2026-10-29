@@ -5,7 +5,11 @@ antigravity-accounts.json
 # Cache and runtime data
 models-store.json
 sessions/
+missions/
 headroom-cache/
+run-history.jsonl
+*.html
+mcp-*.json
 /pi-subagents/
 *.log
 
