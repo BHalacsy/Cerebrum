@@ -16,6 +16,7 @@ import { CustomEditor, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { Key, matchesKey } from "@earendil-works/pi-tui";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import { runSlashSubagent } from "../slash/slash-commands.ts";
 import type { SubagentParamsLike } from "../shared/types.ts";
 
@@ -161,6 +162,11 @@ function saveDefaultMode(mode: string): void {
 	}
 }
 
+function resolveWorkflowScriptPath(mode: string): string {
+	const candidate = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../workflows", `${mode}.js`);
+	return fs.existsSync(candidate) ? candidate : mode;
+}
+
 export default function registerModesExtension(pi: ExtensionAPI): void {
 	patchCustomEditorForTabCompletion();
 
@@ -209,11 +215,12 @@ export default function registerModesExtension(pi: ExtensionAPI): void {
 	function buildParamsForMode(mode: string, text: string): SubagentParamsLike {
 		const def = MODE_DEFS[mode];
 		if (def?.type === "workflow") {
+			const useWorktree = text.includes("--worktree");
+			const cleanProblem = text.replace(/--worktree\b/g, "").trim();
 			return {
-				workflow: mode,
-				task: text,
-				args: { problem: text },
-				worktree: mode === "e2e",
+				workflow: resolveWorkflowScriptPath(mode),
+				args: { problem: cleanProblem },
+				...(useWorktree ? { worktree: true } : {}),
 			};
 		}
 		const agentName = mode === "test" ? "tester" : mode;

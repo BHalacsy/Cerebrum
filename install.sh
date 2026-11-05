@@ -54,6 +54,15 @@ if [ -f "$TARGET_DIR/package.json" ]; then
   (cd "$TARGET_DIR" && npm install --omit=dev)
 fi
 
+# Install dependencies for extensions with their own package.json (e.g. pi-subagents)
+for ext_pkg in "$TARGET_DIR"/extensions/*/package.json; do
+  if [ -f "$ext_pkg" ]; then
+    ext_dir="$(dirname "$ext_pkg")"
+    echo "==> Installing npm dependencies in $ext_dir..."
+    (cd "$ext_dir" && npm install --omit=dev)
+  fi
+done
+
 # Locate Pi binary
 PI_BIN="${TARGET_DIR}/bin/pi"
 if [ ! -x "$PI_BIN" ]; then

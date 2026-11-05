@@ -169,13 +169,17 @@ function buildChainInitialResult(params: SubagentParamsLike): AgentToolResult<De
 
 function buildSingleInitialResult(params: SubagentParamsLike): AgentToolResult<Details> {
 	const preview = previewSimpleWorkflowRun(params.workflowScript) ?? {};
-	const agent = params.agent ?? preview.agent ?? "subagent";
-	const task = params.task ?? preview.task ?? "";
+	const workflowLabel = typeof params.workflow === "string" ? params.workflow : undefined;
+	const problemText = typeof (params.args as { problem?: unknown } | undefined)?.problem === "string"
+		? (params.args as { problem: string }).problem
+		: undefined;
+	const agent = params.agent ?? preview.agent ?? (workflowLabel ? `workflow:${workflowLabel}` : "subagent");
+	const task = params.task ?? preview.task ?? problemText ?? "";
 	const sessionName = deriveChildSessionName({ agent, task });
 	return {
-		content: [{ type: "text", text: task }],
+		content: [{ type: "text", text: task || (workflowLabel ? `Workflow: ${workflowLabel}` : "") }],
 		details: {
-			mode: "single",
+			mode: workflowLabel || params.workflowScript ? "workflow" : "single",
 			...(params.async ? { background: true } : {}),
 			...(params.context === "fresh" || params.context === "fork" ? { context: params.context } : {}),
 			results: [createPlaceholderResult(agent, task, "running", 0)],

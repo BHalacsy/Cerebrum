@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { discoverAgents, discoverAgentsAll, findBlockingAgentDiagnostic, formatAvailableAgentLines, formatUnknownAgentError, resolveAgentName, suggestAgentName, unknownAgentDiagnosticContext, type AgentConfig, type AgentDiscoveryDiagnostic, type AgentScope, type UnknownAgentDiagnosticContext } from "../../agents/agents.ts";
@@ -8060,7 +8061,14 @@ export function createSubagentExecutor(deps: ExecutorDeps): {
 			return Promise.resolve({ content: [{ type: "text", text: normalized.error }], isError: true, details: { mode: normalized.mode, results: [] } });
 		}
 		let publicParams = normalized.params as SubagentParamsLike;
-		const workflow = publicParams.workflow;
+		let workflow = publicParams.workflow;
+		if (typeof workflow === "string" && !isWorkflowScriptPath(workflow)) {
+			const candidate = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../workflows", `${workflow}.js`);
+			if (fs.existsSync(candidate)) {
+				workflow = candidate;
+				publicParams = { ...publicParams, workflow: candidate };
+			}
+		}
 		const errorResult = (text: string): Promise<AgentToolResult<Details>> => Promise.resolve({ content: [{ type: "text", text }], isError: true, details: { mode: publicParams.action ? "management" : "workflow", results: [] } });
 		// Models tend to put script text in the workflow string; say how to pass it instead.
 		const scriptTextHint = " A workflow string is a named workflow resource or a script file path. To run script text, write it in one ```js workflow block in the same reply and call subagent({ workflow: true }).";
