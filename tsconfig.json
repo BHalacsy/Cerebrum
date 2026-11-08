@@ -8,7 +8,8 @@
     "strict": true,
     "skipLibCheck": true,
     "paths": {
-      "@earendil-works/*": ["./install/releases/1.4.0/node_modules/@earendil-works/*"]
+      "@earendil-works/*": ["./install/releases/1.4.0/node_modules/@earendil-works/*"],
+      "typebox": ["./install/releases/1.4.0/node_modules/typebox"]
     },
     "typeRoots": ["./install/releases/1.4.0/node_modules/@types"],
     "types": ["node"]

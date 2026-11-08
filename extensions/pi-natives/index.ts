@@ -167,6 +167,8 @@ function registerFind(pi: ExtensionAPI) {
 	pi.registerTool({
 		...base,
 		parameters: findSchema,
+		renderCall: base.renderCall as any,
+		renderResult: base.renderResult as any,
 		description: `${base.description} Skips node_modules unless the pattern mentions it. Directories end with "/".`,
 		defaultActive: false,
 		async execute(toolCallId, params, signal, onUpdate, ctx) {

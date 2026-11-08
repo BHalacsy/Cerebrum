@@ -1,5 +1,5 @@
 import { Type } from "@earendil-works/pi-ai";
-import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { type AgentToolResult, defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 const rawUrl = process.env.SEARXNG_URL ?? "http://192.168.1.244:8080";
 const parsedUrl = new URL(rawUrl.includes("://") ? rawUrl : `http://${rawUrl}`);
@@ -15,6 +15,11 @@ interface SearxResult {
 	content?: string;
 	engine?: string;
 	score?: number;
+}
+
+interface WebsearchDetails {
+	count: number;
+	query: string;
 }
 
 const websearchTool = defineTool({
@@ -36,7 +41,7 @@ const websearchTool = defineTool({
 		language: Type.Optional(Type.String({ description: "BCP-47 language, e.g. 'en', 'hu' (default: instance default)" })),
 	}),
 
-	async execute(_toolCallId, params, signal) {
+	async execute(_toolCallId, params, signal): Promise<AgentToolResult<WebsearchDetails>> {
 		const url = new URL("/search", SEARXNG_URL);
 		url.searchParams.set("q", params.query);
 		url.searchParams.set("format", "json");
@@ -71,7 +76,10 @@ const websearchTool = defineTool({
 
 		const results = (data.results ?? []).slice(0, max);
 		if (results.length === 0 && (data.answers ?? []).length === 0) {
-			return { content: [{ type: "text", text: `No results for "${params.query}".` }], details: { count: 0 } };
+			return {
+				content: [{ type: "text", text: `No results for "${params.query}".` }],
+				details: { count: 0, query: params.query },
+			};
 		}
 
 		const lines: string[] = [];

@@ -244,7 +244,7 @@ export default function tokenSaver(pi: ExtensionAPI) {
 						`compressed ${stats.compressions} tool outputs, saved ~${fmtTok(stats.compressedChars)} tok`,
 						`pruned ${stats.prunes} stale outputs, saved ~${fmtTok(stats.prunedChars)} tok`,
 						`caveman: ${stats.cavemanTurns} terse turns, ${stats.outputTokens.toLocaleString()} output tokens` +
-							(stats.cavemanSavedChars > 0 ? ` · saved ~${fmtTok(stats.cavemanSavedChars)} tok (est., verbose-equivalent ×${CAVEMAN_FACTOR[cfg.caveman]})` : ""),
+							(stats.cavemanSavedChars > 0 && cfg.caveman !== "off" ? ` · saved ~${fmtTok(stats.cavemanSavedChars)} tok (est., verbose-equivalent ×${CAVEMAN_FACTOR[cfg.caveman]})` : ""),
 						`context: ${usage?.percent != null ? `${usage.percent.toFixed(0)}%` : "?"} (prune at ${cfg.headroom.prune.atPercent}%, keep last ${cfg.headroom.prune.keepTurns} turns)`,
 						`config: ${CONFIG_PATH()}`,
 					].join("\n"),
