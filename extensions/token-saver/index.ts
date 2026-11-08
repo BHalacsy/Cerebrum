@@ -206,7 +206,7 @@ export default function tokenSaver(pi: ExtensionAPI) {
 			if (turnOf[idx] > cutoff || e.sourceEntry.type !== "message") return;
 			const msg = e.messages[0] as { role?: string; toolName?: string; content?: ContentPart[] } | undefined;
 			if (msg?.role !== "toolResult" || !Array.isArray(msg.content)) return;
-			if (msg.toolName === "ask_user" || msg.toolName === "workflow_report") return;
+			if (msg.toolName === "ask_user") return;
 			const text = msg.content.filter((c): c is TextPart => c.type === "text").map((c) => c.text).join("\n");
 			if (text.length < p.minChars || text.startsWith(PRUNED_PREFIX)) return;
 			const file = stash(text, `${msg.toolName ?? "tool"}-old`);

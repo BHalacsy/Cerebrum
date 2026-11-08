@@ -29,16 +29,12 @@ if [ "$SCRIPT_DIR" != "$TARGET_DIR" ]; then
     fi
   done
 
-  # Remove legacy/deprecated extensions if present
-  rm -rf "$TARGET_DIR/extensions/context-viewer"
-
-  # Ensure relative workflows symlink
-  if [ -d "$TARGET_DIR/extensions/pi-subagents/workflows" ]; then
-    (cd "$TARGET_DIR" && ln -sfn "extensions/pi-subagents/workflows" "workflows")
-  fi
+  # Remove legacy/deprecated extensions and symlinks if present
+  rm -rf "$TARGET_DIR/extensions/context-viewer" "$TARGET_DIR/extensions/pi-subagents"
+  [ -L "$TARGET_DIR/workflows" ] && rm -f "$TARGET_DIR/workflows"
 
   # Copy config files (back up existing settings if different)
-  for file in settings.json keybindings.json agent-modes.json token-saver.json tsconfig.json package.json package-lock.json; do
+  for file in settings.json keybindings.json token-saver.json tsconfig.json package.json package-lock.json; do
     if [ -f "$SCRIPT_DIR/$file" ]; then
       if [ -f "$TARGET_DIR/$file" ] && ! cmp -s "$SCRIPT_DIR/$file" "$TARGET_DIR/$file"; then
         cp "$TARGET_DIR/$file" "$TARGET_DIR/${file}.bak" 2>/dev/null || true
@@ -54,7 +50,7 @@ if [ -f "$TARGET_DIR/package.json" ]; then
   (cd "$TARGET_DIR" && npm install --omit=dev)
 fi
 
-# Install dependencies for extensions with their own package.json (e.g. pi-subagents)
+# Install dependencies for extensions with their own package.json
 for ext_pkg in "$TARGET_DIR"/extensions/*/package.json; do
   if [ -f "$ext_pkg" ]; then
     ext_dir="$(dirname "$ext_pkg")"

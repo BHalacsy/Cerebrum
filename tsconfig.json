@@ -7,11 +7,10 @@
     "noEmit": true,
     "strict": true,
     "skipLibCheck": true,
-    "baseUrl": ".",
     "paths": {
-      "@earendil-works/*": ["install/releases/1.1.0/node_modules/@earendil-works/*"]
+      "@earendil-works/*": ["./install/releases/1.4.0/node_modules/@earendil-works/*"]
     },
-    "typeRoots": ["install/releases/1.1.0/node_modules/@types"],
+    "typeRoots": ["./install/releases/1.4.0/node_modules/@types"],
     "types": ["node"]
   },
   "include": ["extensions/**/*.ts"]

@@ -668,6 +668,17 @@ export default function (pi: ExtensionAPI) {
 	let peekTaskEpoch = 0; // bumped at every agent task boundary
 	let peekLabelActive = false;
 
+	const PEEK_THROTTLE_MS = 80; // ~12.5 fps cap for thinking peek updates during token streaming
+	let peekThrottleTimer: ReturnType<typeof setTimeout> | undefined;
+	let lastPeekRenderMs = 0;
+
+	const cancelPeekThrottle = () => {
+		if (peekThrottleTimer) {
+			clearTimeout(peekThrottleTimer);
+			peekThrottleTimer = undefined;
+		}
+	};
+
 	const getThinkingLevel = () => (sessionLifecycle.isCurrent() ? pi.getThinkingLevel() : "off");
 
 	/** True while the agent is running (false during session-restore replay). */
@@ -709,6 +720,7 @@ export default function (pi: ExtensionAPI) {
 	};
 
 	const clearPeekLabel = (ctx?: ExtensionContext): void => {
+		cancelPeekThrottle();
 		if (!peekLabelActive) return;
 		const target = ctx ?? lastCtx;
 		if (!target || !isTuiContext(target)) return;
@@ -717,8 +729,26 @@ export default function (pi: ExtensionAPI) {
 		peekLabelActive = false;
 	};
 
+	const scheduleThrottledPeek = (ctx?: ExtensionContext): void => {
+		const now = Date.now();
+		const elapsed = now - lastPeekRenderMs;
+
+		if (elapsed >= PEEK_THROTTLE_MS) {
+			cancelPeekThrottle();
+			lastPeekRenderMs = now;
+			setPeekLabel(ctx);
+		} else if (!peekThrottleTimer) {
+			peekThrottleTimer = setTimeout(() => {
+				peekThrottleTimer = undefined;
+				lastPeekRenderMs = Date.now();
+				setPeekLabel(ctx);
+			}, PEEK_THROTTLE_MS - elapsed);
+		}
+	};
+
 	/** Reset peek state to idle and cancel any scheduled cleanup. */
 	const resetPeek = () => {
+		cancelPeekThrottle();
 		peek.phase = "idle";
 		peek.tail = "";
 		editor?.resetHiddenThinkingLabelTarget();
@@ -766,6 +796,7 @@ export default function (pi: ExtensionAPI) {
 	const uninstallUi = (ctx: ExtensionContext) => {
 		if (!isTuiContext(ctx)) return;
 		if (active) {
+			cancelPeekThrottle();
 			cleanupHeader?.();
 			cleanupFooter?.();
 			editor?.cleanup();
@@ -918,8 +949,9 @@ export default function (pi: ExtensionAPI) {
 		if (!changed) return;
 		if (peek.phase === "thinking") {
 			peekFrame++;
-			setPeekLabel(ctx);
+			scheduleThrottledPeek(ctx);
 		} else if (peek.phase === "done") {
+			cancelPeekThrottle();
 			setPeekLabel(ctx);
 		}
 	});
@@ -962,6 +994,7 @@ export default function (pi: ExtensionAPI) {
 		if (!sessionLifecycle.isCurrent()) return;
 		if (event.message?.role === "assistant" && peek.phase === "thinking") {
 			// Sub-message finished (answer text or a tool call): freeze the peek line.
+			cancelPeekThrottle();
 			peek.phase = "done";
 			setPeekLabel(ctx);
 		}

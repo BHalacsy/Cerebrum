@@ -1,19 +1,7 @@
-/**
- * Web search via a self-hosted SearXNG instance (e.g. on a Raspberry Pi).
- *
- * Configuration:
- *   SEARXNG_URL — base URL of the instance (default: http://100.84.228.114:8080)
- *     - Tailscale IP of hextor (reachable via Windows Tailscale from WSL)
- *     - Tailscale:      http://<pi-magicdns-name>:8080
- *     - Tailscale funnel: https://<pi>.<tailnet>.ts.net
- *   SEARXNG_USERNAME / SEARXNG_PASSWORD — HTTP basic auth (optional). May also
- *     be embedded as userinfo in SEARXNG_URL, e.g. https://user:pass@<pi>.<tailnet>.ts.net
- */
-
 import { Type } from "@earendil-works/pi-ai";
 import { defineTool, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-const rawUrl = process.env.SEARXNG_URL ?? "http://100.84.228.114:8080";
+const rawUrl = process.env.SEARXNG_URL ?? "http://192.168.1.244:8080";
 const parsedUrl = new URL(rawUrl.includes("://") ? rawUrl : `http://${rawUrl}`);
 const SEARXNG_USERNAME = process.env.SEARXNG_USERNAME ?? (parsedUrl.username || undefined);
 const SEARXNG_PASSWORD = process.env.SEARXNG_PASSWORD ?? (parsedUrl.password || undefined);

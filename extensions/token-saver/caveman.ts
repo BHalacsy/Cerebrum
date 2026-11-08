@@ -5,7 +5,7 @@
 export type CavemanLevel = "off" | "lite" | "full" | "ultra";
 export const CAVEMAN_LEVELS: CavemanLevel[] = ["off", "lite", "full", "ultra"];
 
-const BOUNDARIES = `Always written normally (never caveman): code, commands, file contents, commit messages, PR descriptions, ask_user questions, and workflow_report summaries.
+const BOUNDARIES = `Always written normally (never caveman): code, commands, file contents, commit messages, PR descriptions, and ask_user questions.
 Write normally for one reply when clarity matters more than brevity: security warnings, confirming irreversible actions, multi-step instructions where fragments could be misread, or when the user seems confused. Go back to terse after.`;
 
 const PROMPTS: Record<Exclude<CavemanLevel, "off">, string> = {

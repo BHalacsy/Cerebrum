@@ -31,7 +31,7 @@ export interface HeadroomConfig {
 export const DEFAULT_HEADROOM: HeadroomConfig = {
 	enabled: true,
 	maxToolChars: 12_000,
-	exemptTools: ["read", "ask_user", "workflow_report", "edit", "write"],
+	exemptTools: ["read", "ask_user", "edit", "write"],
 	dedupeLines: true,
 	json: { enabled: true, maxArrayItems: 12, maxStringChars: 600 },
 	prune: { enabled: true, atPercent: 55, keepTurns: 6, minChars: 1_500 },

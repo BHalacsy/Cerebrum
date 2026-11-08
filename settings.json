@@ -35,7 +35,8 @@
   ],
   "defaultTools": [
     "+grep",
-    "+find"
+    "+find",
+    "+ls"
   ],
   "theme": "ocean",
   "tuiMode": "fullscreen",

@@ -152,10 +152,21 @@ function registerGrep(pi: ExtensionAPI) {
 // find
 // ---------------------------------------------------------------------------------------------
 
+const findSchema = Type.Object({
+	pattern: Type.Optional(
+		Type.String({
+			description: "Glob pattern to match files, e.g. '*.ts', '**/*.json', or 'src/**/*.spec.ts' (default: '*')",
+		}),
+	),
+	path: Type.Optional(Type.String({ description: "Directory to search in (default: current directory)" })),
+	limit: Type.Optional(Type.Number({ description: "Maximum number of results (default: 1000)" })),
+});
+
 function registerFind(pi: ExtensionAPI) {
 	const base = createFindToolDefinition(process.cwd());
 	pi.registerTool({
 		...base,
+		parameters: findSchema,
 		description: `${base.description} Skips node_modules unless the pattern mentions it. Directories end with "/".`,
 		defaultActive: false,
 		async execute(toolCallId, params, signal, onUpdate, ctx) {
@@ -167,8 +178,8 @@ function registerFind(pi: ExtensionAPI) {
 				throw new Error(`Path not found: ${searchPath}`);
 			}
 			const limit = Math.max(1, params.limit ?? FIND_DEFAULT_LIMIT);
-			// Mirror the built-in: path-containing patterns match at any depth.
-			let pattern = params.pattern;
+			// Default pattern to "*" if omitted; mirror the built-in: path-containing patterns match at any depth.
+			let pattern = params.pattern || "*";
 			if (pattern.includes("/") && !pattern.startsWith("/") && !pattern.startsWith("**/") && pattern !== "**") {
 				pattern = `**/${pattern}`;
 			}
@@ -185,7 +196,7 @@ function registerFind(pi: ExtensionAPI) {
 				});
 			} catch (err) {
 				if (isAbort(signal, err)) throw new Error("Operation aborted");
-				return base.execute(toolCallId, params, signal, onUpdate, ctx);
+				return base.execute(toolCallId, { ...params, pattern }, signal, onUpdate, ctx);
 			}
 
 			if (result.matches.length === 0) {

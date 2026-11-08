@@ -1,11 +1,8 @@
 # Custom Pi Agent Configuration
 
-Personal setup for [Pi](https://pi.dev) with custom extensions, themes, modes, and keybindings.
-
-![img.png](img.png)
+Personal setup for [Pi](https://pi.dev) with custom extensions, themes, and keybindings.
 
 ## Included Extensions
-- **agent-modes**: Switch agent modes and granular permission constraints.
 - **ask-user**: Context gathering tool. Prompts user for input to questions during execution.
 - **context-viewer**: View and inspect context and tokens.
 - **open-tui**: Custom full-screen TUI layout and widgets (Copied from open-tui extension on pi marketplace).
