@@ -8,10 +8,10 @@
     "strict": true,
     "skipLibCheck": true,
     "paths": {
-      "@earendil-works/*": ["./install/releases/1.4.0/node_modules/@earendil-works/*"],
-      "typebox": ["./install/releases/1.4.0/node_modules/typebox"]
+      "@earendil-works/*": ["./install/releases/1.5.2/node_modules/@earendil-works/*"],
+      "typebox": ["./install/releases/1.5.2/node_modules/typebox"]
     },
-    "typeRoots": ["./install/releases/1.4.0/node_modules/@types"],
+    "typeRoots": ["./install/releases/1.5.2/node_modules/@types"],
     "types": ["node"]
   },
   "include": ["extensions/**/*.ts"]

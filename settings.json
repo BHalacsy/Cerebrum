@@ -1,5 +1,5 @@
 {
-  "lastChangelogVersion": "1.4.0",
+  "lastChangelogVersion": "1.5.2",
   "defaultProvider": "antigravity",
   "defaultModel": "gemini-3.8-flash",
   "defaultThinkingLevel": "high",
@@ -50,5 +50,10 @@
   ],
   "fullscreenWheelScrollLines": 2,
   "fullscreenScrollbar": "hidden",
-  "fullscreenCopyOnSelect": false
+  "fullscreenCopyOnSelect": false,
+  "extensionChangelogVersions": {
+    "{\"source\":\"npm:pi-context-view\",\"scope\":\"user\"}": "0.8.4",
+    "{\"source\":\"npm:pi-mcp-adapter\",\"scope\":\"user\"}": "7.0.1"
+  },
+  "enableInstallTelemetry": false
 }
