@@ -10,14 +10,19 @@
  * - Disabling a tool automatically disables anything that depends on it
  *   (transitively), which removes them from the list.
  *
- * Tool selection persists across session reloads and respects branch navigation.
+ * Tool selection persists across session reloads, respects branch navigation, and carries
+ * over to fresh sessions through <agent-dir>/tools.json. Branch entries take precedence over
+ * that file, so an older session keeps its own selection when resumed or forked.
  *
  * Configure dependencies in TOOL_DEPENDENCIES below (tool -> required tools).
  * Use /tools <name> to toggle a single tool directly from the prompt.
+ * Use /tools reset to delete the saved selection so fresh sessions follow defaultTools again.
  */
 
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type { ExtensionAPI, ExtensionContext, ToolInfo } from "@earendil-works/pi-coding-agent";
-import { getSettingsListTheme } from "@earendil-works/pi-coding-agent";
+import { getAgentDir, getSettingsListTheme } from "@earendil-works/pi-coding-agent";
 import { Container, type SettingItem, SettingsList } from "@earendil-works/pi-tui";
 
 /**
@@ -33,6 +38,53 @@ const TOOL_DEPENDENCIES: Record<string, string[]> = {
 // State persisted to session
 interface ToolsState {
 	enabledTools: string[];
+}
+
+// State persisted to the agent directory so fresh sessions inherit the selection.
+interface ToolsFile {
+	version: 1;
+	enabledTools: string[];
+}
+
+function toolsFilePath(): string {
+	return join(getAgentDir(), "tools.json");
+}
+
+/** Read the saved selection, or undefined when there is none or it is unusable. */
+function readToolsFile(): string[] | undefined {
+	try {
+		const path = toolsFilePath();
+		if (!existsSync(path)) return undefined;
+		const data = JSON.parse(readFileSync(path, "utf8")) as Partial<ToolsFile>;
+		const list = data?.enabledTools;
+		if (!Array.isArray(list)) return undefined;
+		return list.filter((name): name is string => typeof name === "string");
+	} catch {
+		// A malformed file must not break session start.
+		return undefined;
+	}
+}
+
+/** Write the saved selection atomically. Failures are non-fatal: the session entry still works. */
+function writeToolsFile(enabled: string[]): void {
+	try {
+		const path = toolsFilePath();
+		mkdirSync(dirname(path), { recursive: true });
+		const tmp = `${path}.tmp`;
+		const data: ToolsFile = { version: 1, enabledTools: [...enabled].sort() };
+		writeFileSync(tmp, `${JSON.stringify(data, null, 2)}\n`);
+		renameSync(tmp, path);
+	} catch {
+		// Ignore: persistence across sessions is best-effort.
+	}
+}
+
+function clearToolsFile(): void {
+	try {
+		rmSync(toolsFilePath(), { force: true });
+	} catch {
+		// Ignore.
+	}
 }
 
 export default function toolManagerExtension(pi: ExtensionAPI) {
@@ -83,6 +135,8 @@ export default function toolManagerExtension(pi: ExtensionAPI) {
 		pi.appendEntry<ToolsState>("tools-config", {
 			enabledTools: Array.from(enabledTools),
 		});
+		// Also save to the agent directory so fresh sessions start from this selection.
+		writeToolsFile(Array.from(enabledTools));
 	}
 
 	function applyTools() {
@@ -131,8 +185,16 @@ export default function toolManagerExtension(pi: ExtensionAPI) {
 		}
 
 		const known = allTools.map((t) => t.name);
-		if (savedTools) {
-			enabledTools = new Set(savedTools.filter((t) => known.includes(t)));
+		let source = savedTools;
+		if (!source) {
+			// Fresh session: inherit the selection saved in the agent directory, unless Pi started
+			// with no tools at all (an explicit --no-tools run must stay empty).
+			const persisted = readToolsFile();
+			if (persisted && pi.getActiveTools().length > 0) source = persisted;
+		}
+
+		if (source) {
+			enabledTools = new Set(source.filter((t) => known.includes(t)));
 			// Drop anything whose dependencies are no longer satisfied.
 			for (const tool of enabledTools) {
 				if (!isListable(tool)) enabledTools.delete(tool);
@@ -151,8 +213,16 @@ export default function toolManagerExtension(pi: ExtensionAPI) {
 		handler: async (args, ctx) => {
 			allTools = pi.getAllTools();
 
-			// Direct toggle: /tools <name>
 			const target = args.trim();
+
+			// /tools reset - forget the saved across-session selection.
+			if (target === "reset" && !allTools.some((t) => t.name === "reset")) {
+				clearToolsFile();
+				ctx.ui.notify("Cleared saved tool selection; fresh sessions follow defaultTools again", "info");
+				return;
+			}
+
+			// Direct toggle: /tools <name>
 			if (target) {
 				const name = allTools.find((t) => t.name === target)?.name;
 				if (!name) {
