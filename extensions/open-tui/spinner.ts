@@ -14,21 +14,19 @@ const HOLD_END = TRAIL_LENGTH;
 const HOLD_START = TRAIL_LENGTH * 2;
 
 const RESET = "\x1b[0m";
-// Ocean palette (themes/ocean.json, cyan #18b3c4 on bg #0a2332), approximated
-// with 256-color cube codes. Truecolor escapes (38;2;r;g;b) leak as raw text
-// on this terminal, so stick to widely-supported 38;5 codes.
-// Teal ramp: bright cyan head fading through the cube's teal column, then the
-// last cell drops to grey 237, barely above the 236 dot color.
 const DIM = "\x1b[38;5;236m";
+
+// Linear fade from vibrant cyan (#00afd7 / code 38) to desaturated dark gray (code 236).
+// Uses the 6x6x6 cube's desaturated cyan-gray diagonal before landing on the grayscale ramp.
 const TRAIL_COLORS = [
-	"\x1b[38;5;38m",  // Head: RGB(0, 175, 215) — closest vibrant 256-color match to #18b3c4
-	"\x1b[38;5;37m",  // RGB(0, 175, 175) — slightly deeper saturated cyan
-	"\x1b[38;5;31m",  // RGB(0, 135, 175) — mid-tone muted cyan
-	"\x1b[38;5;30m",  // RGB(0, 135, 135) — medium teal
-	"\x1b[38;5;24m",  // RGB(0, 95, 135)  — deep slate teal
-	"\x1b[38;5;23m",  // RGB(0, 95, 95)   — dark muted sea green/gray
-	"\x1b[38;5;238m", // Grayscale ramp: fading dark grey-cyan transition
-	"\x1b[38;5;236m", // Tail: barely above the background dot color
+	"\x1b[38;5;38m",  // Head: RGB(0, 175, 215)   — vibrant cyan
+	"\x1b[38;5;73m",  // RGB(95, 175, 175)  — soft desaturated cyan
+	"\x1b[38;5;109m", // RGB(135, 175, 175) — pale cyan-gray
+	"\x1b[38;5;102m", // RGB(135, 135, 135) — neutral medium gray
+	"\x1b[38;5;242m", // RGB(108, 108, 108) — medium-dark gray
+	"\x1b[38;5;240m", // RGB(88, 88, 88)    — dark gray
+	"\x1b[38;5;238m", // RGB(68, 68, 68)    — deeper dark gray
+	"\x1b[38;5;236m", // Tail: RGB(48, 48, 48) — matches DIM background dot color
 ];
 
 function colorize(value: string, color: string) {
